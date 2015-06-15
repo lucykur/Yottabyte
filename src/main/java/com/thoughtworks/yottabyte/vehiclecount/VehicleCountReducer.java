@@ -11,6 +11,13 @@ public class VehicleCountReducer extends Reducer<Text,IntWritable,NullWritable,T
   @Override
   protected void reduce(Text vehicleType, Iterable<IntWritable> values, Context context)
     throws IOException, InterruptedException {
+     int numberOfVehicles = 0;
+
+    for(IntWritable value: values){
+      numberOfVehicles += Integer.parseInt(value.toString());
+    }
+
+    context.write(NullWritable.get(), new Text(String.format("%s,%s", vehicleType, numberOfVehicles)));
   }
 }
 
