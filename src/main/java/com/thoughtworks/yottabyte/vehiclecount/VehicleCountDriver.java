@@ -49,6 +49,8 @@ public class VehicleCountDriver extends Configured implements Tool {
     job.setReducerClass(VehicleCountReducer.class);
     job.setOutputValueClass(Text.class);
     job.setOutputKeyClass(NullWritable.class);
+    job.setPartitionerClass(Partitioner.class);
+    job.setNumReduceTasks();
 
     return job.waitForCompletion(true) ? 0 : 1;
   }
