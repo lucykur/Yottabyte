@@ -4,13 +4,9 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFunction;
 import scala.Tuple2;
-
-import java.util.Collections;
-import java.util.Comparator;
 
 public class SparkDriver {
     public static void main(String[] args) {
@@ -24,33 +20,32 @@ public class SparkDriver {
 
         JavaRDD<String> lines = sc.textFile(path);
 
-        JavaPairRDD<String, Integer> pairs = lines.mapToPair(new PairFunction<String, String, Integer>() {
+        JavaPairRDD<Tuple2<String, Integer>, Integer> pairs = lines.mapToPair(new PairFunction<String, Tuple2<String, Integer>, Integer>() {
             @Override
-            public Tuple2<String, Integer> call(String s) throws Exception {
+            public Tuple2<Tuple2<String, Integer>, Integer> call(String s) throws Exception {
                 String[] words = s.split(",");
-                return new Tuple2<>(words[1], Integer.parseInt(words[7]));
+                return new Tuple2<>(new Tuple2<String, Integer>(words[1], Integer.parseInt(words[2])), Integer.parseInt(words[7]));
             }
         });
 
-        final JavaPairRDD<String, Integer> stringIntegerJavaPairRDD = pairs.reduceByKey(new Function2<Integer, Integer, Integer>() {
+        JavaPairRDD<Tuple2<String, Integer>, Integer> totals = pairs.reduceByKey(new Function2<Integer, Integer, Integer>() {
             @Override
-            public Integer call(Integer acc, Integer totalByCountry) throws Exception {
-                return acc + totalByCountry;
+            public Integer call(Integer acc, Integer medals) throws Exception {
+                return acc + medals;
             }
         });
 
-
-        JavaPairRDD<Integer, String> swapped = stringIntegerJavaPairRDD.mapToPair(new PairFunction<Tuple2<String, Integer>, Integer, String>() {
+        JavaPairRDD<Integer, Tuple2<String, Integer>> swapped = totals.mapToPair(new PairFunction<Tuple2<Tuple2<String, Integer>, Integer>, Integer, Tuple2<String, Integer>>() {
             @Override
-            public Tuple2<Integer, String> call(Tuple2<String, Integer> stringIntegerTuple2) throws Exception {
-                return new Tuple2<Integer, String>(stringIntegerTuple2._2, stringIntegerTuple2._1);
+            public Tuple2<Integer, Tuple2<String, Integer>> call(Tuple2<Tuple2<String, Integer>, Integer> tuple2IntegerTuple2) throws Exception {
+                return new Tuple2<Integer, Tuple2<String, Integer>>(tuple2IntegerTuple2._2, tuple2IntegerTuple2._1);
             }
         });
 
-        Tuple2<Integer, String> first = swapped.sortByKey(false).first();
+        Tuple2<Integer, Tuple2<String, Integer>> first = swapped.sortByKey(false).first();
 
 //        stringIntegerJavaPairRDD.saveAsTextFile(destination);
 
-        System.out.println(String.format("%s:%s", first._1, first._2));
+        System.out.println(String.format("%s:%s, %s", first._1, first._2._1, first._2._2));
     }
 }
